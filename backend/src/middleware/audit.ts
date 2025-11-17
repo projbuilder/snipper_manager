@@ -12,6 +12,10 @@ export const auditLog = (action: string, targetType: string) => {
       }
 
       const targetId = req.params.id || req.body._id || req.body.id;
+      if (!targetId) {
+        next();
+        return;
+      }
       const ip = req.ip || req.connection.remoteAddress || 'unknown';
 
       await AuditLog.create({

@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { snippetService } from '../services/snippetService';
-import { Snippet } from '../types';
+import {
+  LANGUAGE_OPTIONS,
+  getLanguageOption,
+  DEFAULT_LANGUAGE,
+} from '../constants/languages';
+import { registerMonacoLanguages } from '../utils/monacoLanguages';
 
 const SnippetEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -10,10 +15,13 @@ const SnippetEditor = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [code, setCode] = useState('');
-  const [language, setLanguage] = useState('javascript');
+  const [language, setLanguage] = useState(DEFAULT_LANGUAGE.value);
   const [tags, setTags] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private' | 'unlisted'>('private');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const selectedLanguage = useMemo(() => getLanguageOption(language), [language]);
 
   useEffect(() => {
     if (id) loadSnippet(id);
@@ -26,7 +34,7 @@ const SnippetEditor = () => {
       setTitle(snippet.title);
       setDescription(snippet.description || '');
       setCode(snippet.code);
-      setLanguage(snippet.language);
+      setLanguage(getLanguageOption(snippet.language).value);
       setTags(snippet.tags.join(', '));
       setVisibility(snippet.visibility);
     } catch (error) {
@@ -37,12 +45,13 @@ const SnippetEditor = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(null);
 
     const snippetData = {
       title,
       description,
       code,
-      language,
+      language: selectedLanguage.value,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       visibility,
     };
@@ -58,6 +67,10 @@ const SnippetEditor = () => {
       navigate(`/snippets/${id}`);
     } catch (error) {
       console.error('Failed to save snippet:', error);
+      const message =
+        (error as any)?.response?.data?.error?.message ??
+        (error instanceof Error ? error.message : 'Failed to save snippet. Please try again.');
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }
@@ -68,6 +81,12 @@ const SnippetEditor = () => {
       <h1 className="text-3xl font-bold mb-6">{id ? 'Edit' : 'Create'} Snippet</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {errorMessage && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="card space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Title</label>
@@ -100,14 +119,11 @@ const SnippetEditor = () => {
                 onChange={(e) => setLanguage(e.target.value)}
                 className="input"
               >
-                <option value="javascript">JavaScript</option>
-                <option value="typescript">TypeScript</option>
-                <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="go">Go</option>
-                <option value="rust">Rust</option>
-                <option value="cpp">C++</option>
-                <option value="csharp">C#</option>
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -143,15 +159,19 @@ const SnippetEditor = () => {
           </div>
           <Editor
             height="500px"
-            language={language}
+            language={selectedLanguage.monacoLanguage}
             value={code}
             onChange={(value) => setCode(value || '')}
             theme="vs-dark"
+            beforeMount={registerMonacoLanguages}
+            path={`snippet.${selectedLanguage.extension}`}
             options={{
               minimap: { enabled: false },
               fontSize: 14,
               lineNumbers: 'on',
               scrollBeyondLastLine: false,
+              wordWrap: 'on',
+              automaticLayout: true,
             }}
           />
         </div>

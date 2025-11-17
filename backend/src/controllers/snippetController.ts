@@ -1,14 +1,18 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import Snippet from '../models/Snippet';
 import Star from '../models/Star';
 import { AppError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
 
-export const createSnippet = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createSnippet = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     if (!req.user) {
-      throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
+      return next(new AppError('Authentication required', 401, 'UNAUTHORIZED'));
     }
 
     const snippetData = {
@@ -25,13 +29,19 @@ export const createSnippet = async (req: AuthRequest, res: Response): Promise<vo
       data: { snippet },
     });
   } catch (error: any) {
-    if (error instanceof AppError) throw error;
+    if (error instanceof AppError) return next(error);
     logger.error('Create snippet error:', error);
-    throw new AppError(error.message || 'Failed to create snippet', 500, 'CREATE_SNIPPET_ERROR');
+    return next(
+      new AppError(error.message || 'Failed to create snippet', 500, 'CREATE_SNIPPET_ERROR')
+    );
   }
 };
 
-export const getSnippets = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getSnippets = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const {
       q,
@@ -107,24 +117,28 @@ export const getSnippets = async (req: AuthRequest, res: Response): Promise<void
     });
   } catch (error: any) {
     logger.error('Get snippets error:', error);
-    throw new AppError('Failed to fetch snippets', 500, 'GET_SNIPPETS_ERROR');
+    return next(new AppError('Failed to fetch snippets', 500, 'GET_SNIPPETS_ERROR'));
   }
 };
 
-export const getSnippetById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getSnippetById = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { id } = req.params;
 
     const snippet = await Snippet.findById(id).populate('author', 'username displayName email');
 
     if (!snippet) {
-      throw new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND');
+      return next(new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND'));
     }
 
     // Check visibility permissions
     if (snippet.visibility === 'private') {
       if (!req.user || snippet.author._id.toString() !== req.user.id) {
-        throw new AppError('Access denied', 403, 'ACCESS_DENIED');
+        return next(new AppError('Access denied', 403, 'ACCESS_DENIED'));
       }
     }
 
@@ -150,28 +164,32 @@ export const getSnippetById = async (req: AuthRequest, res: Response): Promise<v
       },
     });
   } catch (error: any) {
-    if (error instanceof AppError) throw error;
+    if (error instanceof AppError) return next(error);
     logger.error('Get snippet error:', error);
-    throw new AppError('Failed to fetch snippet', 500, 'GET_SNIPPET_ERROR');
+    return next(new AppError('Failed to fetch snippet', 500, 'GET_SNIPPET_ERROR'));
   }
 };
 
-export const updateSnippet = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateSnippet = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     if (!req.user) {
-      throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
+      return next(new AppError('Authentication required', 401, 'UNAUTHORIZED'));
     }
 
     const { id } = req.params;
     const snippet = await Snippet.findById(id);
 
     if (!snippet) {
-      throw new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND');
+      return next(new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND'));
     }
 
     // Check ownership
     if (snippet.author.toString() !== req.user.id && !req.user.roles.includes('admin')) {
-      throw new AppError('Access denied', 403, 'ACCESS_DENIED');
+      return next(new AppError('Access denied', 403, 'ACCESS_DENIED'));
     }
 
     // Update fields
@@ -185,28 +203,32 @@ export const updateSnippet = async (req: AuthRequest, res: Response): Promise<vo
       data: { snippet },
     });
   } catch (error: any) {
-    if (error instanceof AppError) throw error;
+    if (error instanceof AppError) return next(error);
     logger.error('Update snippet error:', error);
-    throw new AppError('Failed to update snippet', 500, 'UPDATE_SNIPPET_ERROR');
+    return next(new AppError('Failed to update snippet', 500, 'UPDATE_SNIPPET_ERROR'));
   }
 };
 
-export const deleteSnippet = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteSnippet = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     if (!req.user) {
-      throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
+      return next(new AppError('Authentication required', 401, 'UNAUTHORIZED'));
     }
 
     const { id } = req.params;
     const snippet = await Snippet.findById(id);
 
     if (!snippet) {
-      throw new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND');
+      return next(new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND'));
     }
 
     // Check ownership
     if (snippet.author.toString() !== req.user.id && !req.user.roles.includes('admin')) {
-      throw new AppError('Access denied', 403, 'ACCESS_DENIED');
+      return next(new AppError('Access denied', 403, 'ACCESS_DENIED'));
     }
 
     await snippet.deleteOne();
@@ -223,28 +245,32 @@ export const deleteSnippet = async (req: AuthRequest, res: Response): Promise<vo
       },
     });
   } catch (error: any) {
-    if (error instanceof AppError) throw error;
+    if (error instanceof AppError) return next(error);
     logger.error('Delete snippet error:', error);
-    throw new AppError('Failed to delete snippet', 500, 'DELETE_SNIPPET_ERROR');
+    return next(new AppError('Failed to delete snippet', 500, 'DELETE_SNIPPET_ERROR'));
   }
 };
 
-export const forkSnippet = async (req: AuthRequest, res: Response): Promise<void> => {
+export const forkSnippet = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     if (!req.user) {
-      throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
+      return next(new AppError('Authentication required', 401, 'UNAUTHORIZED'));
     }
 
     const { id } = req.params;
     const originalSnippet = await Snippet.findById(id);
 
     if (!originalSnippet) {
-      throw new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND');
+      return next(new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND'));
     }
 
     // Only public snippets can be forked
     if (originalSnippet.visibility !== 'public') {
-      throw new AppError('Only public snippets can be forked', 403, 'FORK_NOT_ALLOWED');
+      return next(new AppError('Only public snippets can be forked', 403, 'FORK_NOT_ALLOWED'));
     }
 
     // Create forked snippet
@@ -271,23 +297,27 @@ export const forkSnippet = async (req: AuthRequest, res: Response): Promise<void
       data: { snippet: forkedSnippet },
     });
   } catch (error: any) {
-    if (error instanceof AppError) throw error;
+    if (error instanceof AppError) return next(error);
     logger.error('Fork snippet error:', error);
-    throw new AppError('Failed to fork snippet', 500, 'FORK_SNIPPET_ERROR');
+    return next(new AppError('Failed to fork snippet', 500, 'FORK_SNIPPET_ERROR'));
   }
 };
 
-export const starSnippet = async (req: AuthRequest, res: Response): Promise<void> => {
+export const starSnippet = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     if (!req.user) {
-      throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
+      return next(new AppError('Authentication required', 401, 'UNAUTHORIZED'));
     }
 
     const { id } = req.params;
     const snippet = await Snippet.findById(id);
 
     if (!snippet) {
-      throw new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND');
+      return next(new AppError('Snippet not found', 404, 'SNIPPET_NOT_FOUND'));
     }
 
     // Check if already starred
@@ -329,13 +359,17 @@ export const starSnippet = async (req: AuthRequest, res: Response): Promise<void
       });
     }
   } catch (error: any) {
-    if (error instanceof AppError) throw error;
+    if (error instanceof AppError) return next(error);
     logger.error('Star snippet error:', error);
-    throw new AppError('Failed to star snippet', 500, 'STAR_SNIPPET_ERROR');
+    return next(new AppError('Failed to star snippet', 500, 'STAR_SNIPPET_ERROR'));
   }
 };
 
-export const getUserSnippets = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getUserSnippets = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
@@ -373,6 +407,6 @@ export const getUserSnippets = async (req: AuthRequest, res: Response): Promise<
     });
   } catch (error: any) {
     logger.error('Get user snippets error:', error);
-    throw new AppError('Failed to fetch user snippets', 500, 'GET_USER_SNIPPETS_ERROR');
+    return next(new AppError('Failed to fetch user snippets', 500, 'GET_USER_SNIPPETS_ERROR'));
   }
 };

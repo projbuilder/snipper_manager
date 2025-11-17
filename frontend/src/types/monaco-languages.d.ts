@@ -1,0 +1,9 @@
+declare module 'monaco-editor/esm/vs/basic-languages/javascript/javascript';
+declare module 'monaco-editor/esm/vs/basic-languages/typescript/typescript';
+declare module 'monaco-editor/esm/vs/basic-languages/python/python';
+declare module 'monaco-editor/esm/vs/basic-languages/java/java';
+declare module 'monaco-editor/esm/vs/basic-languages/go/go';
+declare module 'monaco-editor/esm/vs/basic-languages/rust/rust';
+declare module 'monaco-editor/esm/vs/basic-languages/cpp/cpp';
+declare module 'monaco-editor/esm/vs/basic-languages/csharp/csharp';
+declare module 'monaco-editor/esm/vs/basic-languages/sql/sql';

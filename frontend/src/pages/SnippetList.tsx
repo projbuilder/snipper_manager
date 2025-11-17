@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { snippetService } from '../services/snippetService';
 import { Snippet } from '../types';
 import SnippetCard from '../components/snippet/SnippetCard';
+import { LANGUAGE_OPTIONS } from '../constants/languages';
 
 const SnippetList = () => {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -65,11 +66,11 @@ const SnippetList = () => {
             <label className="block text-sm font-medium mb-1">Language</label>
             <select value={language} onChange={(e) => setLanguage(e.target.value)} className="input">
               <option value="">All Languages</option>
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="typescript">TypeScript</option>
-              <option value="java">Java</option>
-              <option value="go">Go</option>
+              {LANGUAGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
           <div>

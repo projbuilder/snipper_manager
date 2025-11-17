@@ -5,6 +5,7 @@ export interface ISnippet extends Document {
   description: string;
   code: string;
   language: string;
+  textLanguage: string;
   tags: string[];
   author: mongoose.Types.ObjectId;
   visibility: 'public' | 'private' | 'unlisted';
@@ -47,6 +48,10 @@ const snippetSchema = new Schema<ISnippet>(
       required: true,
       lowercase: true,
       trim: true,
+    },
+    textLanguage: {
+      type: String,
+      default: 'none',
     },
     tags: {
       type: [String],
@@ -117,10 +122,55 @@ snippetSchema.index({ visibility: 1, createdAt: -1 });
 snippetSchema.index({ author: 1, createdAt: -1 });
 
 // Text index for search
-snippetSchema.index({
-  title: 'text',
-  description: 'text',
-  code: 'text',
+snippetSchema.index(
+  {
+    title: 'text',
+    description: 'text',
+    code: 'text',
+  },
+  {
+    default_language: 'none',
+    language_override: 'textLanguage',
+    name: 'SnippetTextIndex',
+  }
+);
+
+const SUPPORTED_TEXT_LANGUAGES = new Set([
+  'danish',
+  'dutch',
+  'english',
+  'finnish',
+  'french',
+  'german',
+  'hungarian',
+  'italian',
+  'norwegian',
+  'portuguese',
+  'romanian',
+  'russian',
+  'spanish',
+  'swedish',
+  'turkish',
+]);
+
+const LANGUAGE_TO_TEXT_LANGUAGE: Record<string, string> = {
+  javascript: 'english',
+  typescript: 'english',
+  python: 'english',
+  java: 'english',
+  go: 'english',
+  rust: 'english',
+  cpp: 'english',
+  csharp: 'english',
+  c: 'english',
+  sql: 'english',
+};
+
+snippetSchema.pre('save', function (next) {
+  const doc = this as unknown as ISnippet;
+  const candidate = LANGUAGE_TO_TEXT_LANGUAGE[doc.language] || 'none';
+  doc.textLanguage = SUPPORTED_TEXT_LANGUAGES.has(candidate) ? candidate : 'none';
+  next();
 });
 
 // Compound indexes

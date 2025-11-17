@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Star, GitFork, Eye, Code } from 'lucide-react';
+import { Star, GitFork, Eye } from 'lucide-react';
 import { Snippet } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
 
